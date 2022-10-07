@@ -22,6 +22,7 @@ func main() {
 	router := gin.Default()
 
 	router.POST("/orders", createOrder)
+	router.GET("/orders", getOrder)
 
 	fmt.Println("server is running on port", port)
 
@@ -86,6 +87,22 @@ func createOrder(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, gin.H{"message": "order has been recorded"})
+}
+
+func getOrder(ctx *gin.Context){
+	db := database.GetDB()
+
+	var results []models.Order
+
+
+	db.Find(&results)
+
+	if len(results) == 0 {
+		ctx.JSON(http.StatusNotFound, gin.H{"message":"No record found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data":results})
 }
 
 func checkCodeExist(id string) bool {
