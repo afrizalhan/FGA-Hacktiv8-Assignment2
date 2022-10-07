@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
+
 	// "errors"
 	// "fmt"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func main(){
+func main() {
 	port := ":8080"
 
 	database.StartDB()
@@ -27,7 +28,7 @@ func main(){
 	router.Run(port)
 }
 
-func createOrder(ctx *gin.Context){
+func createOrder(ctx *gin.Context) {
 	db := database.GetDB()
 
 	var body models.Body
@@ -46,9 +47,13 @@ func createOrder(ctx *gin.Context){
 
 	for _, item := range body.Items {
 		check = checkCodeExist(item.ItemCode)
+		if check {
+			break
+		}
 	}
 
 	if check {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "item code already exist"})
 		ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("item code already exist"))
 		return
 	}
@@ -56,6 +61,7 @@ func createOrder(ctx *gin.Context){
 	err := db.Create(&newOrder).Error
 
 	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err})
 		ctx.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
@@ -74,6 +80,7 @@ func createOrder(ctx *gin.Context){
 	err = db.Create(&items).Error
 
 	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err})
 		ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("failed storing item"))
 		return
 	}
@@ -81,16 +88,12 @@ func createOrder(ctx *gin.Context){
 	ctx.JSON(http.StatusCreated, gin.H{"message": "order has been recorded"})
 }
 
-func checkCodeExist(id string) bool{
+func checkCodeExist(id string) bool {
 	db := database.GetDB()
 
 	var item models.Item
 
 	r := db.Where("item_code = ?", id).First(&item)
 
-	if r.RowsAffected > 0{
-		return true
-	} 
-
-	return false
+	return r.RowsAffected > 0
 }
